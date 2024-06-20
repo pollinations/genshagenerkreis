@@ -30,18 +30,7 @@ const Message = ({ message }: { message: ChatMessage }) => {
 };
 
 export default function Chat() {
-  const { messages, input, handleSubmit, append } = useChat({
-    initialMessages: [
-      { id: "1", role: "system", content: `
-You are receiving a transcript of messages from a conference. 
-Each time you receive a new sentence I want you to update an image prompt for an image generator to partially reflect the new sentence. 
-Although it should keep things from before. I.e. the prompt you contiuously generate should slowly evolve to reflect the conversation. 
-It should be abstract and humurous.
-Only respond with the prompt and nothing else.
-You should respond with a maximum of 77 tokens or around 50 words.
-` }
-    ]
-  })
+  const { messages, input, handleSubmit, append } = useChat();
 
   const {
     transcript,
