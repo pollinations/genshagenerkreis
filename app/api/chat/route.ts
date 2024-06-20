@@ -14,7 +14,7 @@ The prompt should continuously evolve to reflect the conversation.
 It should be abstract and humorous.
 Only respond with the prompt and nothing else.
 Respond with a maximum of 77 tokens or around 50 words.
-Add surrealism and dadaism to the prompt.` }
+Add bauhaus and dadaism style references to the prompt. minimalist and sophisticated` }
 ];
 
 
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
   // Combine initialMessages with the last three messages from the request
   const combinedMessagesUnparsed = [
     ...initialMessages,
-    ...messages.slice(-3)
+    ...messages.slice(-4)
   ];
 
   const combinedMessages = combinedMessagesUnparsed.map(removeImageData);

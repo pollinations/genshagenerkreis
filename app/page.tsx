@@ -5,7 +5,7 @@ import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognitio
 import { useEffect, useRef, memo, useState } from "react";
 
 // Custom hook for speech recognition
-const useSpeechRecognitionHook = (append) => {
+const useSpeechRecognitionHook = (append: (message: ChatMessage) => void) => {
   const {
     transcript,
     listening,
@@ -59,18 +59,45 @@ const useSpeechRecognitionHook = (append) => {
   };
 };
 
+const downloadedImages = [];
+  // Function to download the image
+const downloadImage = (image: string, content: string) => {
+    const existingImage = downloadedImages.find(img => img.content === content);
+    if (existingImage) {
+      return;
+    }
+
+    const link = document.createElement('a');
+    link.href = image;
+    link.download = `image_${content.slice(0, 2000).replace(/[^a-z0-9]/gi, '_').toLowerCase()}.jpeg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    downloadedImages.push({ image, content });
+  };
+
 // Message component to display the last assistant message's image and content
-const LastAssistantMessage = ({ message }) => {
+const LastAssistantMessage = ({ message }: { message: { role: string, content: string, image: string } }) => {
   const image = message.image;
   const content = message.content;
+
+
+
+  useEffect(() => {
+    if (message.role === "assistant" && message.image) {
+      downloadImage(message.image, message.content);
+    }
+  }, [message]);
+
   return (
     <div className="flex flex-col items-center">
+      <div className="whitespace-pre-wrap mt-4 text-center" style={{ fontSize: "1.2rem" }}>
+        {content.slice(0, 120) + "..."}
+      </div>
       {message.role === "assistant" && message.content.length > 50 && (
         <img height="768" width="768" src={image} alt="Generated" className="mt-2 rounded-lg" />
       )}
-      <div className="whitespace-pre-wrap mt-4 text-center" style={{ fontSize: "1.2rem" }}>
-        {content.slice(0, 150)+"..."}
-      </div>
     </div>
   );
 };
@@ -78,10 +105,9 @@ const LastAssistantMessage = ({ message }) => {
 export default function Chat() {
   const { messages, input, handleSubmit, append, handleInputChange } = useChat();
 
-
   const formRef = useRef<HTMLFormElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [lastAssistantMessage, setLastAssistantMessage] = useState(null);
+  const [lastAssistantMessage, setLastAssistantMessage] = useState<{ role: string, content: string, image: string } | null>(null);
 
   const {
     transcript,
@@ -126,7 +152,9 @@ export default function Chat() {
     <main className="bg-gray-900 text-white">
       <h1 className="mt-0 m-10 text-4xl md:text-6xl text-center pt-10 md:pt-20 font-bold tracking-tighter">
         <span className="underline underline-offset-8">DreamStream</span>{" "}
-        ft. <span className="text-red-500">Groq</span> and <span className="text-red-500">Pollinations.AI</span>
+        {/* ft. 
+         <span className="text-red-500">Groq</span> and 
+        <span className="text-red-500">&nbsp;Pollinations.AI</span> */}
       </h1>
 
       <div className="flex flex-col max-w-xl mx-auto pt-2 md:pt-10 pb-32">
