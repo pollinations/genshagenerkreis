@@ -4,6 +4,8 @@ import { useChat, Message as ChatMessage } from "ai/react"
 import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
 import { useEffect, useRef, memo, useState } from "react";
 
+const ENABLE_AUTO_DOWNLOADS = false;
+
 // Custom hook for speech recognition
 const useSpeechRecognitionHook = (append: (message: ChatMessage) => void) => {
   const {
@@ -16,23 +18,30 @@ const useSpeechRecognitionHook = (append: (message: ChatMessage) => void) => {
   const [displayedTranscript, setDisplayedTranscript] = useState<string>("");
   const [enableSpeech, setEnableSpeech] = useState<boolean>(true);
   const [lastAppendTime, setLastAppendTime] = useState<number>(0);
+  const [accumulatedTranscript, setAccumulatedTranscript] = useState("");
 
   const handleVoiceInput = () => {
     if (!listening) {
-      SpeechRecognition.startListening({ continuous: false });
+      SpeechRecognition.startListening({ continuous: false, language: 'de-DE' });
     }
   };
 
   useEffect(() => {
     const currentTime = Date.now();
-    if (!listening && transcript && enableSpeech && (currentTime - lastAppendTime > 20000)) {
-      console.log("appending", transcript);
-      append({
-        role: "user",
-        content: transcript
-      });
-      resetTranscript();
-      setLastAppendTime(currentTime);
+    if (!listening && transcript && enableSpeech) {
+      if (currentTime - lastAppendTime < 10000) {
+        setAccumulatedTranscript(accumulatedTranscript + ".\n" + transcript);
+      }
+      else {
+        console.log("sending", transcript);
+        append({
+          role: "user",
+          content: accumulatedTranscript + ".\n" + transcript
+        });
+        resetTranscript();
+        setLastAppendTime(currentTime); 
+        setAccumulatedTranscript("");
+      }
     }
   }, [listening, transcript, append, resetTranscript, enableSpeech, lastAppendTime]);
 
@@ -59,7 +68,7 @@ const useSpeechRecognitionHook = (append: (message: ChatMessage) => void) => {
   };
 };
 
-const downloadedImages = [];
+const downloadedImages: { image: string, content: string }[] = [];
   // Function to download the image
 const downloadImage = (image: string, content: string) => {
     const existingImage = downloadedImages.find(img => img.content === content);
@@ -69,7 +78,7 @@ const downloadImage = (image: string, content: string) => {
 
     const link = document.createElement('a');
     link.href = image;
-    link.download = `image_${content.slice(0, 200).replace(/[^a-z0-9]/gi, '_').toLowerCase()}.jpeg`;
+    link.download = `image_${content.slice(0, 120).replace(/[^a-z0-9]/gi, '_').toLowerCase()}.jpeg`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -82,21 +91,25 @@ const LastAssistantMessage = ({ message }: { message: { role: string, content: s
   const image = message.image;
   const content = message.content;
 
-
-
   useEffect(() => {
-    if (message.role === "assistant" && message.image) {
+    if (ENABLE_AUTO_DOWNLOADS && message.role === "assistant" && message.image) {
       downloadImage(message.image, message.content);
     }
   }, [message]);
 
+  const handleImageClick = () => {
+    if (!ENABLE_AUTO_DOWNLOADS && message.role === "assistant" && message.image) {
+      downloadImage(message.image, message.content);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center">
-      <div className="whitespace-pre-wrap mt-4 text-center" style={{ fontSize: "1.1rem" }}>
-        {content.slice(0, 160) + "..."}
+      <div className="whitespace-pre-wrap mt-4 text-center" style={{ fontSize: "1.3rem" }}>
+        {content.slice(0, 220) + "..."}
       </div>
       {message.role === "assistant" && message.content.length > 50 && (
-        <img height="768" width="768" src={image} alt="Generated" className="mt-2 rounded-lg" />
+        <img height="768" width="768" src={image} alt="Generated" className="mt-2 rounded-lg" onClick={handleImageClick} />
       )}
     </div>
   );
@@ -157,18 +170,21 @@ export default function Chat() {
         <span className="text-red-500">&nbsp;Pollinations.AI</span> */}
       </h1>
 
-      <div className="flex flex-col max-w-xl mx-auto pt-2 md:pt-10 pb-32">
+      <div className="flex flex-col  mx-auto pt-2 md:pt-10 pb-32" style={{maxWidth: "800px"}}>
         {/* <div className="text-center mb-4" style={{ fontSize: "1.5rem" }}>{displayedTranscript}</div> */}
         {lastAssistantMessage && <LastAssistantMessage message={lastAssistantMessage} />}
         <div ref={messagesEndRef} />
 
         <form
           ref={formRef}
-          onSubmit={handleSubmit}
+          onSubmit={(e) => {
+            handleSubmit(e);
+            formRef.current?.reset();
+          }}
           className="flex items-start justify-center">
           <input
             className="rounded-full p-4 w-full border-2 border-gray-700 bg-gray-800 fixed bottom-10 left-0 right-0 z-10 m-auto max-w-xs md:max-w-2xl placeholder:text-sm text-white"
-            value={input || displayedTranscript}
+            value={input || displayedTranscript || ""}
             placeholder="Say something..."
             onChange={handleInputChange}
           />

@@ -10,29 +10,39 @@ const initialMessages = [
 You are receiving a transcript of messages from a conference. 
 
 Each time you receive a new sentence I want you to update an image prompt for an image generator to reflect the new sentence. 
-Although it should keep some things from before. 
-The prompt should continuously evolve to reflect the conversation. 
 
 It should be abstract and humorous.
 Respond with a maximum of 77 tokens or around 50 words.
-Add bauhaus and dadaism style references to the prompt. minimalist and sophisticated. The style references should always appear at the end of the prompt.
+Add style references to the prompt. The style references should always appear at the end of the prompt.
+- try to stick to the provided styles and themes but adapt the subjects
+- choose the theme/style that seems most appropriate for the input prompt
+- interpret the concepts in the input prompt very freely and creatively
+
+# Possible Styles
+- vintage photo
+- bokeh kodak film vintage photo black and white sepia
+- retrofuturism style
+- Minimalist, Symbolic, Abstract
+- Cubist, Modern, Mixed Media
+- Abstract, Modern, Symbolic
+- Minimalist, Continuous Line Drawing
+- Rough, Visible Textures
+- Bauhaus Exhibition Poster
+- Sci-Fi, Futuristic, Simon Stalenhag
+- bauhaus and dadaism
 
 Only respond with the prompt and nothing else.
 Response format: [short 4 word content summary] [extra detail] [style references]
 ` }
 ];
 
-
-// # Examples of how to make prompts
-// - try to stick to the provided styles and themes but adapt the subjects
-// - choose the theme/style that seems most appropriate for the input prompt
-// - interpret the concepts in the input prompt very freely and creatively
-
-
+// Climate terrorists that drive an SUV
+// Although it should keep some things from before. 
+// The prompt should continuously evolve to reflect the conversation. 
 // Create an OpenAI API client (that's edge friendly!)
 const openai = new OpenAI({
-  apiKey: process.env.GROQ_API_KEY || "",
-  baseURL: "https://api.groq.com/openai/v1",
+  apiKey: process.env.OPENAI_API_KEY || "",
+  baseURL: "https://api.openai.com/v1",
 })
 
 // IMPORTANT! Set the runtime to edge
@@ -54,7 +64,7 @@ export async function POST(req: Request) {
   // Combine initialMessages with the last three messages from the request
   const combinedMessagesUnparsed = [
     ...initialMessages,
-    ...messages.slice(-4)
+    ...messages.slice(-2)
   ];
 
   const combinedMessages = combinedMessagesUnparsed.map(removeImageData);
@@ -63,8 +73,7 @@ export async function POST(req: Request) {
 
   // Ask OpenAI for a chat completion given the prompt
   const response = await openai.chat.completions.create({
-    // model: "llama3-70b-8192",
-    model: randomModel(),
+    model: "gpt-4",
     stream: false,
     messages: combinedMessages,
   })
@@ -76,15 +85,20 @@ export async function POST(req: Request) {
   }
 
   if (GENERATE_SD3_IMAGE) {
-    const sd3Response = await generateSD3Image(messageContent);
+    let imageResponse;
+    try {
+      imageResponse = await generateSD3Image(messageContent);
+    } catch (error) {
+      console.error("Error generating SD3 image, trying Pollinations image:", error);
+      imageResponse = await generatePollinationsImage(messageContent);
+    }
     return new Response(JSON.stringify({
       message: messageContent,
-      image: sd3Response
+      image: imageResponse
     }), {
       headers: { 'Content-Type': 'application/json' }
     });
   }
-
   return new Response(JSON.stringify({ message: messageContent }), {
     headers: { 'Content-Type': 'application/json' }
   });
@@ -96,11 +110,14 @@ export async function POST(req: Request) {
  * @returns {Promise<string>} - The URL of the generated image.
  */
 async function generateSD3Image(prompt: string): Promise<string> {
+
+  // remove all characters that are not dots, spaces and alphanumeric nad german umlaut
+
   const host = "https://api.stability.ai/v2beta/stable-image/generate/sd3";
   const payload = new FormData();
   payload.append("prompt", prompt);
   payload.append("aspect_ratio", "1:1");
-  payload.append("seed", "42");
+  payload.append("seed", 0);
   payload.append("output_format", "jpeg");
   payload.append("model", "sd3-large-turbo");
 
@@ -113,6 +130,7 @@ async function generateSD3Image(prompt: string): Promise<string> {
   console.log("Host:", host);
   console.log("Payload:", payload);
   console.log("Headers:", headers);
+  console.log("Prompt:", prompt);
 
   try {
     const response = await fetch(host, {
@@ -125,6 +143,7 @@ async function generateSD3Image(prompt: string): Promise<string> {
 
     if (response.status !== 200) {
       const errorText = await response.text();
+      console.error("Error response text:", errorText);
       throw new Error(`${response.status}: ${errorText}`);
     }
 
@@ -137,6 +156,34 @@ async function generateSD3Image(prompt: string): Promise<string> {
     throw error;
   }
 }
+
+/**
+ * Generates an image using Pollinations.
+ * @param {string} prompt - The prompt for the image generation.
+ * @returns {Promise<string>} - The URL of the generated image.
+ */
+async function generatePollinationsImage(prompt: string): Promise<string> {
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?enhance=true`;
+
+  try {
+    const response = await fetch(url);
+
+    if (response.status !== 200) {
+      const errorText = await response.text();
+      console.error("Error response text:", errorText);
+      throw new Error(`${response.status}: ${errorText}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const base64Image = Buffer.from(arrayBuffer).toString('base64');
+    console.log("Generated image (base64):", base64Image.slice(0, 100));
+    return `data:image/jpeg;base64,${base64Image}`;
+  } catch (error) {
+    console.error("Error generating image:", error);
+    throw error;
+  }
+}
+
 /**
  * Removes image data from the message content.
  * Tries to parse the content as JSON and extracts the message property if successful.
@@ -155,15 +202,13 @@ function removeImageData(message: Message) {
     // If parsing fails, use the original content
   }
 
+  if (content.length > 2000) {
+    content = content.slice(0, 2000);
+  }
+
   return {
     role: message.role,
     content: content
   };
 }
 
-
-const randomModel = () => {
-  const models = ["gemma-7b-it", "llama3-8b-8192", "mixtral-8x7b-32768", "llama3-70b-8192", "mixtral-8x7b-32768"];
-  const randomIndex = Math.floor(Math.random() * models.length);
-  return models[randomIndex];
-}
