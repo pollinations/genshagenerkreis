@@ -6,6 +6,7 @@ import { useEffect, useRef, memo } from "react";
 
 // Message component to display individual messages
 const Message = ({ message }: { message: ChatMessage }) => {
+  const imageprompt = message.content;
   return (
     <div
       key={message.id}
@@ -22,7 +23,7 @@ const Message = ({ message }: { message: ChatMessage }) => {
         )}
         {message.content}
         {message.role === "assistant" && message.content.length > 50 && (
-          <img height="768" width="768" src={`https://image.pollinations.ai/prompt/${encodeURIComponent(message.content)}`} alt="Generated" className="mt-2 rounded-lg" />
+          <img height="768" width="768" src={`https://image.pollinations.ai/prompt/${encodeURIComponent(imageprompt)}`} alt="Generated" className="mt-2 rounded-lg" />
         )}
       </div>
     </div>
@@ -65,7 +66,7 @@ export default function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  console.log("messages", messages[messages.length - 1].content);
+  // console.log("messages", messages[messages.length - 1].content);
 
   if (!browserSupportsSpeechRecognition) {
     return <span>Browser doesn't support speech recognition.</span>
@@ -74,8 +75,8 @@ export default function Chat() {
   return (
     <main className="bg-gray-900 text-white">
       <h1 className="mt-0 m-10 text-4xl md:text-6xl text-center pt-10 md:pt-20 font-bold tracking-tighter">
-        Chat with <span className="underline underline-offset-8">Mixtral</span>{" "}
-        ft. <span className="text-red-500">Groq</span> Cloud
+        <span className="underline underline-offset-8">DreamStream</span>{" "}
+        ft. <span className="text-red-500">Groq</span> and <span className="text-red-500">Pollinations.AI</span>
       </h1>
 
       <div className="flex flex-col max-w-xl mx-auto pt-2 md:pt-10 pb-32">

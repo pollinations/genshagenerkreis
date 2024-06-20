@@ -3,13 +3,14 @@ import { OpenAIStream, StreamingTextResponse, Message} from "ai"
 
 
 const initialMessages = [
-  { id: "1", role: "system", content: `
+  { role: "system", content: `
 You are receiving a transcript of messages from a conference. 
-Each time you receive a new sentence I want you to update an image prompt for an image generator to partially reflect the new sentence. 
-Although it should keep things from before. I.e. the prompt you contiuously generate should slowly evolve to reflect the conversation. 
+Each time you receive a new sentence I want you to update an image prompt for an image generator to reflect the new sentence. 
+Although it should keep some things from before. 
+The prompt should contiuously should evolve to reflect the conversation. 
 It should be abstract and humurous.
 Only respond with the prompt and nothing else.
-You should respond with a maximum of 77 tokens or around 50 words.
+Respond with a maximum of 77 tokens or around 50 words.
 ` }
 ];
 
@@ -30,13 +31,15 @@ export const runtime = "edge"
  */
 export async function POST(req: Request) {
   const { messages } = await req.json()
-  console.log("messages", messages);
 
   // Combine initialMessages with the last two messages from the request
   const combinedMessages = [
     ...initialMessages,
     ...messages.slice(-2)
   ];
+
+  console.log("messages", combinedMessages);
+
 
   // Ask OpenAI for a chat completion given the prompt
   const response = await openai.chat.completions.create({
