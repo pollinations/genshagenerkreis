@@ -8,15 +8,25 @@ import fetch from 'node-fetch';
 const initialMessages = [
   { role: "system", content: `
 You are receiving a transcript of messages from a conference. 
+
 Each time you receive a new sentence I want you to update an image prompt for an image generator to reflect the new sentence. 
 Although it should keep some things from before. 
 The prompt should continuously evolve to reflect the conversation. 
+
 It should be abstract and humorous.
-Only respond with the prompt and nothing else.
 Respond with a maximum of 77 tokens or around 50 words.
-Add bauhaus and dadaism style references to the prompt. minimalist and sophisticated` }
+Add bauhaus and dadaism style references to the prompt. minimalist and sophisticated. The style references should always appear at the end of the prompt.
+
+Only respond with the prompt and nothing else.
+Response format: [short 4 word content summary] [extra detail] [style references]
+` }
 ];
 
+
+// # Examples of how to make prompts
+// - try to stick to the provided styles and themes but adapt the subjects
+// - choose the theme/style that seems most appropriate for the input prompt
+// - interpret the concepts in the input prompt very freely and creatively
 
 
 // Create an OpenAI API client (that's edge friendly!)

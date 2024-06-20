@@ -69,7 +69,7 @@ const downloadImage = (image: string, content: string) => {
 
     const link = document.createElement('a');
     link.href = image;
-    link.download = `image_${content.slice(0, 2000).replace(/[^a-z0-9]/gi, '_').toLowerCase()}.jpeg`;
+    link.download = `image_${content.slice(0, 200).replace(/[^a-z0-9]/gi, '_').toLowerCase()}.jpeg`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -92,8 +92,8 @@ const LastAssistantMessage = ({ message }: { message: { role: string, content: s
 
   return (
     <div className="flex flex-col items-center">
-      <div className="whitespace-pre-wrap mt-4 text-center" style={{ fontSize: "1.2rem" }}>
-        {content.slice(0, 120) + "..."}
+      <div className="whitespace-pre-wrap mt-4 text-center" style={{ fontSize: "1.1rem" }}>
+        {content.slice(0, 160) + "..."}
       </div>
       {message.role === "assistant" && message.content.length > 50 && (
         <img height="768" width="768" src={image} alt="Generated" className="mt-2 rounded-lg" />
