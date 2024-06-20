@@ -6,13 +6,14 @@ const initialMessages = [
   { role: "system", content: `
 You are receiving a transcript of messages from a conference. 
 Each time you receive a new sentence I want you to update an image prompt for an image generator to reflect the new sentence. 
-Although it should keep some things from before. 
-The prompt should contiuously should evolve to reflect the conversation. 
 It should be abstract and humurous.
 Only respond with the prompt and nothing else.
 Respond with a maximum of 77 tokens or around 50 words.
-` }
+Add surrealism and dadaism to the prompt.` }
 ];
+
+// Although it should keep some things from before. 
+// The prompt should contiuously should evolve to reflect the conversation. 
 
 // Create an OpenAI API client (that's edge friendly!)
 const openai = new OpenAI({
@@ -35,7 +36,7 @@ export async function POST(req: Request) {
   // Combine initialMessages with the last two messages from the request
   const combinedMessages = [
     ...initialMessages,
-    ...messages.slice(-2)
+    ...messages.slice(-3)
   ];
 
   console.log("messages", combinedMessages);
@@ -44,6 +45,7 @@ export async function POST(req: Request) {
   // Ask OpenAI for a chat completion given the prompt
   const response = await openai.chat.completions.create({
     model: "llama3-70b-8192",
+    // model: "mixtral-8x7b-32768",
     stream: false,
     messages: combinedMessages,
   })

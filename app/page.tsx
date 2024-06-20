@@ -2,36 +2,25 @@
 import 'regenerator-runtime/runtime';
 import { useChat, Message as ChatMessage } from "ai/react"
 import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
-import { useEffect, useRef, memo } from "react";
+import { useEffect, useRef, memo, useState } from "react";
 
-// Message component to display individual messages
-const Message = ({ message }: { message: ChatMessage }) => {
+// Message component to display the last assistant message's image and content
+const LastAssistantMessage = ({ message }: { message: ChatMessage }) => {
   const imageprompt = message.content;
   return (
-    <div
-      key={message.id}
-      className={`rounded-lg p-4 mb-4 ${
-        message.role === "user"
-          ? "bg-blue-700 text-white max-w-max mx-6"
-          : "bg-gray-700 text-gray-300 mx-6"
-      }`}>
-      <div className="whitespace-pre-wrap">
-        {message.role === "user" ? (
-          <span className="font-semibold mr-1">User:</span>
-        ) : (
-          <span className="font-semibold mr-1">Mixtral:</span>
-        )}
-        {message.content}
-        {message.role === "assistant" && message.content.length > 50 && (
-          <img height="768" width="768" src={`https://image.pollinations.ai/prompt/${encodeURIComponent(imageprompt)}`} alt="Generated" className="mt-2 rounded-lg" />
-        )}
+    <div className="flex flex-col items-center">
+      {message.role === "assistant" && message.content.length > 50 && (
+        <img height="768" width="768" src={`https://image.pollinations.ai/prompt/${encodeURIComponent(imageprompt)}`} alt="Generated" className="mt-2 rounded-lg" />
+      )}
+      <div className="whitespace-pre-wrap mt-4 text-center" style={{ fontSize: "1.2rem" }}>
+        {message.content.slice(0, 150)+"..."}
       </div>
     </div>
   );
 };
 
 export default function Chat() {
-  const { messages, input, handleSubmit, append } = useChat();
+  const { messages, input, handleSubmit, append, handleInputChange } = useChat();
 
   const {
     transcript,
@@ -42,6 +31,8 @@ export default function Chat() {
 
   const formRef = useRef<HTMLFormElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [lastAssistantMessage, setLastAssistantMessage] = useState<ChatMessage | null>(null);
+  const [displayedTranscript, setDisplayedTranscript] = useState<string>("");
 
   const handleVoiceInput = () => {
     if (!listening) {
@@ -66,7 +57,28 @@ export default function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // console.log("messages", messages[messages.length - 1].content);
+  useEffect(() => {
+    const newLastAssistantMessage = messages.slice().reverse().find(message => message.role === "assistant");
+    if (newLastAssistantMessage) {
+      const image = new Image();
+      image.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(newLastAssistantMessage.content)}`;
+      image.onload = () => {
+        setLastAssistantMessage(newLastAssistantMessage);
+      };
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    if (transcript.length >= 10) {
+      setDisplayedTranscript(transcript);
+    }
+  }, [transcript]);
+
+  useEffect(() => {
+    console.log("Transcript:", transcript);
+    console.log("Last Assistant Message Content:", lastAssistantMessage?.content);
+    console.log("Displayed Transcript:", displayedTranscript);
+  }, [transcript, lastAssistantMessage, displayedTranscript]);
 
   if (!browserSupportsSpeechRecognition) {
     return <span>Browser doesn't support speech recognition.</span>
@@ -80,7 +92,8 @@ export default function Chat() {
       </h1>
 
       <div className="flex flex-col max-w-xl mx-auto pt-2 md:pt-10 pb-32">
-        {messages.map((m) => <Message key={m.id} message={m} />)}
+        <div className="text-center mb-4" style={{ fontSize: "1.5rem" }}>{displayedTranscript}</div>
+        {lastAssistantMessage && <LastAssistantMessage message={lastAssistantMessage} />}
         <div ref={messagesEndRef} />
 
         <form
@@ -91,7 +104,7 @@ export default function Chat() {
             className="rounded-full p-4 w-full border-2 border-gray-700 bg-gray-800 fixed bottom-10 left-0 right-0 z-10 m-auto max-w-xs md:max-w-2xl placeholder:text-sm text-white"
             value={input || transcript}
             placeholder="Say something..."
-            // onChange={handleInputChange}
+            onChange={handleInputChange}
           />
           <button
             type="button"
