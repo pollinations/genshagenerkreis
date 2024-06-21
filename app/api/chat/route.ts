@@ -87,6 +87,7 @@ export async function POST(req: Request) {
   if (GENERATE_SD3_IMAGE) {
     let imageResponse;
     try {
+      throw new Error("Sd3 image generation disabled");
       imageResponse = await generateSD3Image(messageContent);
     } catch (error) {
       console.error("Error generating SD3 image, trying Pollinations image:", error);

@@ -22,7 +22,9 @@ const useSpeechRecognitionHook = (append: (message: ChatMessage) => void) => {
 
   const handleVoiceInput = () => {
     if (!listening) {
-      SpeechRecognition.startListening({ continuous: false, language: 'de-DE' });
+      SpeechRecognition.startListening({ continuous: false, 
+        // language: 'de-DE'
+       });
     }
   };
 
